@@ -2,7 +2,6 @@ var Game = require('./modal');
 var s1 = require('./strategy1');
 
 const express = require('express');
-const { SocketAddress } = require('net');
 const app = express();
 
 class Meta {
@@ -37,12 +36,12 @@ for (let i = 0; i <= M.player_cnt; i++) {
   });
   M.ios[i] = require('socket.io')(M.servers[i], {
     cors: {
-      origin: "http://localhost:" + (3000+i),
+      origin: '*',
       methods: ["GET", "POST"]
     }
   });
   M.ios[i].on('connection', socket => {
-    console.log('success connect with ' + (3000+i));
+    console.log('success connect with player ' + i;
     socket.on('addMove', move => {
       M.G.players[move.player_id-1].addMove(move.p, move.d, move.is_half);
     });
