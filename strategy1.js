@@ -17,12 +17,13 @@ const shuffleArray = (array) => {
   return array;
 }
   
-const adj4 = (p, row, col) => {
+
+const adj4 = ([i, j], row, col) => {
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const res = [];
-  for (let di = -1; di <= 1; di++)
-    for (let dj = -1; dj <= 1; dj++)
-      if (Math.abs(di + dj) === 1 && 0 <= p.i + di && p.i + di < row && 0 <= p.j + dj && p.j + dj < col)
-        res.push({i: p.i + di, j: p.j + dj});
+  for (const [di, dj] of dirs)
+    if (0 <= i+di && i+di < row && 0 <= j+dj && j+dj < col)
+      res.push([i+di, j+dj]);
   return res;
 }
 
@@ -46,12 +47,12 @@ const s1 = (player) => {
   for (let i = 0; i < player.row; i++) {
     for (let j = 0; j < player.col; j++) {
       if (player.board[i][j].owner !== player.id) continue;
-      for (let p of shuffleArray(adj4({i: i, j: j}, player.row, player.col))) {
-        if (player.board[p.i][p.j].type !== BoardType.hometown) continue;
-        if (player.board[p.i][p.j].owner === player.id) continue;
-        if (player.board[p.i][p.j].val >= player.board[i][j]-1) continue;
-        let is_half = (Math.floor((player.board[i][j].val-1)/2) > player.board[p.i][p.j].val);
-        player.addMove({i: i, j: j}, {i: p.i-i, j: p.j-j}, is_half);
+      for (let [ai, aj] of shuffleArray(adj4([i, j], player.row, player.col))) {
+        if (player.board[ai][aj].type !== BoardType.hometown) continue;
+        if (player.board[ai][aj].owner === player.id) continue;
+        if (player.board[ai][aj].val >= player.board[i][j]-1) continue;
+        let is_half = (Math.floor((player.board[i][j].val-1)/2) > player.board[ai][aj].val);
+        player.addMove({i: i, j: j}, {i: ai-i, j: aj-j}, is_half);
         return;
       }
     }
@@ -62,12 +63,12 @@ const s1 = (player) => {
       for (let j of Array.from(Array(player.col).keys()).sort(() => 0.5 - Math.random())) {
         if (player.board[i][j].owner !== player.id) continue;
         if (player.board[i][j].val <= 1) continue;
-        for (let p of shuffleArray(adj4({i: i, j: j}, player.row, player.col))) {
-          if (player.board[p.i][p.j].type === BoardType.obstacle) continue;
-          if (player.board[p.i][p.j].owner === player.id) continue;
-          if (player.board[p.i][p.j].val >= player.board[i][j].val-1) continue;
-          let is_half = (Math.floor((player.board[i][j].val-1)/2) > player.board[p.i][p.j].val);
-          player.addMove({i: i, j: j}, {i: p.i-i, j: p.j-j}, is_half);
+        for (let [ai, aj] of shuffleArray(adj4([i, j], player.row, player.col))) {
+          if (player.board[ai][aj].type === BoardType.obstacle) continue;
+          if (player.board[ai][aj].owner === player.id) continue;
+          if (player.board[ai][aj].val >= player.board[i][j].val-1) continue;
+          let is_half = (Math.floor((player.board[i][j].val-1)/2) > player.board[ai][aj].val);
+          player.addMove({i: i, j: j}, {i: ai-i, j: aj-j}, is_half);
           return;
         }
       }
@@ -84,27 +85,27 @@ const s1 = (player) => {
       }
     }
   }
-  for (let p of shuffleArray(adj4({i: mx.i, j: mx.j}, player.row, player.col))) {
-    if (player.board[p.i][p.j].type === BoardType.obstacle) continue;
-    if (player.board[p.i][p.j].owner === player.id) continue;
-    if (player.board[p.i][p.j].val >= player.board[mx.i][mx.j]-1) continue;
-    let is_half = (Math.floor((player.board[mx.i][mx.j].val-1)/2) > player.board[p.i][p.j].val);
-    player.addMove({i: mx.i, j: mx.j}, {i: p.i-mx.i, j: p.j-mx.j}, is_half);
+  for (let [ai, aj] of shuffleArray(adj4([mx.i, mx.j], player.row, player.col))) {
+    if (player.board[ai][aj].type === BoardType.obstacle) continue;
+    if (player.board[ai][aj].owner === player.id) continue;
+    if (player.board[ai][aj].val >= player.board[mx.i][mx.j]-1) continue;
+    let is_half = (Math.floor((player.board[mx.i][mx.j].val-1)/2) > player.board[ai][aj].val);
+    player.addMove({i: mx.i, j: mx.j}, {i: ai-mx.i, j: aj-mx.j}, is_half);
     return;
   }
   let mmx = {i: -1, j: -1, val: -1};
-  for (let p of shuffleArray(adj4({i: mx.i, j: mx.j}, player.row, player.col))) {
-    if (player.board[p.i][p.j].type === BoardType.obstacle) continue;
-    if (player.board[p.i][p.j].val >= player.board[mx.i][mx.j]-1) continue;
-    if (Math.abs(player.board[p.i][p.j].val - 1) > mmx.val) {
-      mmx.i = p.i;
-      mmx.j = p.j;
-      mmx.val = Math.abs(player.board[p.i][p.j].val - 1);
+  for (let [ai, aj] of shuffleArray(adj4([mx.i, mx.j], player.row, player.col))) {
+    if (player.board[ai][aj].type === BoardType.obstacle) continue;
+    if (Math.abs(player.board[ai][aj].val - 1) > mmx.val) {
+      mmx.i = ai;
+      mmx.j = aj;
+      mmx.val = Math.abs(player.board[ai][aj].val - 1);
     }
   }
-  if (mmx.i === -1) return;
-  player.addMove({i: mx.i, j: mx.j}, {i: mmx.i-mx.i, j: mmx.j-mx.j}, false);
-  return;
+  if (mmx.i !== -1) {
+    player.addMove({i: mx.i, j: mx.j}, {i: mmx.i-mx.i, j: mmx.j-mx.j}, false);
+    return;
+  }
 }
 
 module.exports = s1;

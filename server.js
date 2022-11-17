@@ -50,16 +50,14 @@ for (let i = 0; i <= M.player_cnt; i++) {
   });
 }
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-sleep(1000);
-
 setInterval(async () => {
   await M.G.board_next_step();
   for (let player_id = 0; player_id <= M.player_cnt; player_id++) {
+    if (M.players[player_id].flag === false) continue;
     if (M.players[player_id].type === 'ai') {
       s1(M.G.players[player_id-1]);
     } else {
       M.ios[player_id].emit('gameState', M.G);
     }
   }
-}, 100);
+}, 10);

@@ -12,7 +12,11 @@ const BoardElement = (type, owner) => {
     type: type,
     owner: owner,
     val: 0
-  }
+  };
+}
+
+const Point = (i, j) => {
+  return { i: i, j: j};
 }
 
 class Player {
@@ -37,6 +41,7 @@ class Player {
 
   gameover = () => {
     this.flag = false;
+    return 1;
   }
 }
 
@@ -44,96 +49,87 @@ class Game {
   constructor(row, col, obstacle_rate, castle_rate, player_cnt) {
     this.row = row;
     this.col = col;
-    this.board = new Array(this.row);
-    for (let i = 0; i < this.row; i++) {
-      this.board[i] = new Array(this.col);
+    this.board = new Array(this.row).fill().map(() => new Array(this.col));
+    for (let i = 0; i < this.row; i++)
       for (let j = 0; j < this.col; j++)
         this.board[i][j] = BoardElement(BoardType.land, 0);
-    }
     this.players = [];
     this.time = 0;
 
-    // board generation
+    // obstacle initialization
     for (let _ = 0; _ < obstacle_rate * this.row * this.col; _++) {
-      let p = this.prandom();
-      while (this.board[p.i][p.j].type !== BoardType.land || this.check_board_cut(p)) {
-        p = this.prandom();
-      }
+      let p = this.pRandom();
+      while (this.board[p.i][p.j].type !== BoardType.land || this.check_board_cut(p))
+        p = this.pRandom();
       this.board[p.i][p.j].type = BoardType.obstacle;
     }
+    // castle initialization
     for (let _ = 0; _ < castle_rate * this.row * this.col; _++) {
-      let p = this.prandom();
-      while (this.board[p.i][p.j].type !== BoardType.land) {
-        p = this.prandom();
-      }
+      let p = this.pRandom();
+      while (this.board[p.i][p.j].type !== BoardType.land)
+        p = this.pRandom();
       this.board[p.i][p.j].type = BoardType.castle;
       this.board[p.i][p.j].val = 40 + Math.floor(Math.random() * 11);
     }
-
     // player initialization
     this.players = [];
     for (let player_id = 1; player_id <= player_cnt; player_id++) {
-      let p = this.prandom();
-      while (this.board[p.i][p.j].type !== BoardType.land) {
-        p = this.prandom();
-      }
+      let p = this.pRandom();
+      while (this.board[p.i][p.j].type !== BoardType.land)
+        p = this.pRandom();
       this.board[p.i][p.j].type = BoardType.hometown;
       this.board[p.i][p.j].owner = player_id;
       this.players.push(new Player(this.row, this.col, this.board_mask(player_id), p, player_id, player_id, this.time));
     }
   }
 
-  prandom = () => {
-    return {
-      i: Math.floor(Math.random() * this.row),
-      j: Math.floor(Math.random() * this.col)
-    };
+  pRandom = () => {
+    return Point(Math.floor(Math.random() * this.row), Math.floor(Math.random() * this.col));
   };
 
-  adj4(p) {
+  adj4([i, j]) {
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     const res = [];
-    for (let di = -1; di <= 1; di++)
-      for (let dj = -1; dj <= 1; dj++)
-        if (Math.abs(di + dj) === 1 && 0 <= p.i + di && p.i + di < this.row && 0 <= p.j + dj && p.j + dj < this.col)
-          res.push({i: p.i + di, j: p.j + dj});
+    for (const [di, dj] of dirs)
+      if (0 <= i+di && i+di < this.row && 0 <= j+dj && j+dj < this.col)
+        res.push([i+di, j+dj]);
     return res;
   }
 
-  adj9(p) {
+  adj9([i, j]) {
+    const dirs = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 0], [0, 1], [1, -1], [1, 0], [1, 1]];
     const res = [];
-    for (let di = -1; di <= 1; di++)
-      for (let dj = -1; dj <= 1; dj++)
-        if (0 <= p.i + di && p.i + di < this.row && 0 <= p.j + dj && p.j + dj < this.col)
-          res.push({i: p.i + di, j: p.j + dj});
+    for (const [di, dj] of dirs)
+      if (0 <= i+di && i+di < this.row && 0 <= j+dj && j+dj < this.col)
+        res.push([i+di, j+dj]);
     return res;
   }
 
   check_board_cut = (p) => {
     this.board[p.i][p.j].type = BoardType.obstacle;
-    let visited = new Array(this.row);
+    let visited = new Array(this.row).fill().map(() => new Array(this.col));
     let cnt_land = 0;
     for (let i = 0; i < this.row; i++) {
-      visited[i] = new Array(this.col);
       for (let j = 0; j < this.col; j++) {
         visited[i][j] = false;
         cnt_land += (this.board[i][j].type === BoardType.land ? 1 : 0);
       }
     }
     let bfs_queue = [];
-    for (let adjp of this.adj4(p)) {
-      if (this.board[adjp.i][adjp.j].type !== BoardType.obstacle) {
-        bfs_queue.push({i: adjp.i, j: adjp.j});
-        visited[adjp.i][adjp.j] = true;
+    for (const [ai, aj] of this.adj4([p.i, p.j])) {
+      if (this.board[ai][aj].type !== BoardType.obstacle) {
+        bfs_queue.push([ai, aj]);
+        visited[ai][aj] = true;
         break;
       }
     }
     while (bfs_queue.length) {
-      let curp = bfs_queue.shift();
+      const [i, j] = bfs_queue.shift();
       cnt_land--;
-      for (let nxtp of this.adj4(curp)) {
-        if (this.board[nxtp.i][nxtp.j].type === BoardType.land && !visited[nxtp.i][nxtp.j]) {
-          bfs_queue.push(nxtp);
-          visited[nxtp.i][nxtp.j] = true;
+      for (const [ai, aj] of this.adj4([i, j])) {
+        if (this.board[ai][aj].type === BoardType.land && !visited[ai][aj]) {
+          bfs_queue.push([ai, aj]);
+          visited[ai][aj] = true;
         }
       }
     }
@@ -144,26 +140,23 @@ class Game {
   board_mask = (player_id) => {
     return this.board.map((row, i) => {
       return row.map((cell, j) => {
-        let visible = this.adj9({i: i, j: j}).some((p) => {
-          return this.board[p.i][p.j].owner === player_id;
+        const visible = this.adj9([i, j]).some(([ai, aj]) => {
+          return this.board[ai][aj].owner === player_id;
         });
         if (visible) return cell;
-        const res = BoardElement(BoardType.invisible, 0);
-        if (cell.type === BoardType.obstacle || cell.type === BoardType.castle) {
+        let res = BoardElement(BoardType.invisible, 0);
+        if (cell.type === BoardType.obstacle || cell.type === BoardType.castle)
           res.type = BoardType.invisible_obstacle;
-        }
         return res;
       })
     })
   }
 
   board_next_step = async () => {
-    let dboard = new Array(this.row);
-    for (let i = 0; i < this.row; i++) {
-      dboard[i] = new Array(this.col);
+    let dboard = new Array(this.row).fill().map(() => new Array(this.col));
+    for (let i = 0; i < this.row; i++)
       for (let j = 0; j < this.col; j++)
         dboard[i][j] = { owner: 0, val: 0 };
-    }
     let moves = [];
     for (let player of this.players) {
       if (player.moves.length === 0) continue;
@@ -189,7 +182,6 @@ class Game {
     for (let m1 of moves) {
       for (let m2 of moves) {
         if (m1.p1 == m2.p2 && m1.p2 == m2.p1) {
-          console.log("www");
           let mmin = Math.min(m1.dval, m2.dval);
           m1.dval -= mmin;
           m2.dval -= mmin;
