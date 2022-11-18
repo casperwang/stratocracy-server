@@ -15,16 +15,12 @@ const BoardElement = (type, owner) => {
   };
 }
 
-const Point = (i, j) => {
-  return { i: i, j: j};
-}
-
 class Player {
-  constructor(row, col, board, hometown, player_id, team_id, time) {
+  constructor(row, col, board, [i, j], player_id, team_id, time) {
     this.row = row;
     this.col = col;
     this.board = board;
-    this.hometown = hometown;
+    this.hometown = [i, j];
     this.id = player_id;
     this.team_id = team_id;
     this.flag = true;
@@ -33,9 +29,9 @@ class Player {
     this.moves = [];
   }
 
-  addMove = (p, d, is_half) => {
-    if (Math.abs(d.i) + Math.abs(d.j) !== 1) return -1;
-    this.moves.push({p: p, d: d, is_half: is_half});
+  addMove = ([pi, pj], [di, dj], is_half) => {
+    if (Math.abs(di) + Math.abs(dj) !== 1) return -1;
+    this.moves.push({p: [pi, pj], d: [di, dj], is_half: is_half});
     return 1;
   }
 
@@ -58,33 +54,33 @@ class Game {
 
     // obstacle initialization
     for (let _ = 0; _ < obstacle_rate * this.row * this.col; _++) {
-      let p = this.pRandom();
-      while (this.board[p.i][p.j].type !== BoardType.land || this.check_board_cut(p))
-        p = this.pRandom();
-      this.board[p.i][p.j].type = BoardType.obstacle;
+      let [pi, pj] = this.pRandom();
+      while (this.board[pi][pj].type !== BoardType.land || this.check_board_cut([pi, pj]))
+        [pi, pj] = this.pRandom();
+      this.board[pi][pj].type = BoardType.obstacle;
     }
     // castle initialization
     for (let _ = 0; _ < castle_rate * this.row * this.col; _++) {
-      let p = this.pRandom();
-      while (this.board[p.i][p.j].type !== BoardType.land)
-        p = this.pRandom();
-      this.board[p.i][p.j].type = BoardType.castle;
-      this.board[p.i][p.j].val = 40 + Math.floor(Math.random() * 11);
+      let [pi, pj] = this.pRandom();
+      while (this.board[pi][pj].type !== BoardType.land)
+        [pi, pj] = this.pRandom();
+      this.board[pi][pj].type = BoardType.castle;
+      this.board[pi][pj].val = 40 + Math.floor(Math.random() * 11);
     }
     // player initialization
     this.players = [];
     for (let player_id = 1; player_id <= player_cnt; player_id++) {
-      let p = this.pRandom();
-      while (this.board[p.i][p.j].type !== BoardType.land)
-        p = this.pRandom();
-      this.board[p.i][p.j].type = BoardType.hometown;
-      this.board[p.i][p.j].owner = player_id;
-      this.players.push(new Player(this.row, this.col, this.board_mask(player_id), p, player_id, player_id, this.time));
+      let [pi, pj] = this.pRandom();
+      while (this.board[pi][pj].type !== BoardType.land)
+        [pi, pj] = this.pRandom();
+      this.board[pi][pj].type = BoardType.hometown;
+      this.board[pi][pj].owner = player_id;
+      this.players.push(new Player(this.row, this.col, this.board_mask(player_id), [pi, pj], player_id, player_id, this.time));
     }
   }
 
   pRandom = () => {
-    return Point(Math.floor(Math.random() * this.row), Math.floor(Math.random() * this.col));
+    return [Math.floor(Math.random() * this.row), Math.floor(Math.random() * this.col)];
   };
 
   adj4([i, j]) {
@@ -105,8 +101,8 @@ class Game {
     return res;
   }
 
-  check_board_cut = (p) => {
-    this.board[p.i][p.j].type = BoardType.obstacle;
+  check_board_cut = ([pi, pj]) => {
+    this.board[pi][pj].type = BoardType.obstacle;
     let visited = new Array(this.row).fill().map(() => new Array(this.col));
     let cnt_land = 0;
     for (let i = 0; i < this.row; i++) {
@@ -116,7 +112,7 @@ class Game {
       }
     }
     let bfs_queue = [];
-    for (const [ai, aj] of this.adj4([p.i, p.j])) {
+    for (const [ai, aj] of this.adj4([pi, pj])) {
       if (this.board[ai][aj].type !== BoardType.obstacle) {
         bfs_queue.push([ai, aj]);
         visited[ai][aj] = true;
@@ -133,7 +129,7 @@ class Game {
         }
       }
     }
-    this.board[p.i][p.j].type = BoardType.land;
+    this.board[pi][pj].type = BoardType.land;
     return cnt_land > 0;
   };
 
@@ -161,22 +157,27 @@ class Game {
     for (let player of this.players) {
       if (player.moves.length === 0) continue;
       let move = player.moves.shift();
-      let p1 = move.p, p2 = {i: move.p.i + move.d.i, j: move.p.j + move.d.j};
+      let [di, dj] = move.d;
+      let [i1, j1] = move.p;
+      let [i2, j2] = [i1 + di, j1 + dj];
       let flag = false;
-      while (p2.i < 0 || p2.i >= this.row || p2.j < 0 || p2.j >= this.col || this.board[p1.i][p1.j].owner !== player.id || this.board[p1.i][p1.j].val === 0 || this.board[p2.i][p2.j].type === BoardType.obstacle) {
+      while (i2 < 0 || i2 >= this.row || j2 < 0 || j2 >= this.col || this.board[i1][j1].owner !== player.id || this.board[i1][j1].val === 0 || this.board[i2][j2].type === BoardType.obstacle) {
         if (player.moves.length === 0) {
           flag = true;
           break;
         }
         move = player.moves.shift();
-        p1 = move.p, p2 = {i: move.p.i + move.d.i, j: move.p.j + move.d.j};
+        [di, dj] = move.d;
+        [i1, j1] = move.p;
+        [i2, j2] = [i1 + di, j1 + dj];
       }
       if (flag) continue;
       let m = {
-        p1: p1, 
-        p2: p2, 
+        p1: [i1, j1],
+        p2: [i2, j2],
         id: player.id, 
-        dval: Math.ceil((this.board[p1.i][p1.j].val-1) / (move.is_half ? 2 : 1)) };
+        dval: Math.ceil((this.board[i1][j1].val-1) / (move.is_half ? 2 : 1))
+      };
       moves.push(m);
     }
     for (let m1 of moves) {
@@ -187,11 +188,13 @@ class Game {
           m2.dval -= mmin;
         }
       }
-      this.board[m1.p1.i][m1.p1.j].val -= m1.dval;
-      dboard[m1.p2.i][m1.p2.j].val -= m1.dval;
-      if (dboard[m1.p2.i][m1.p2.j].val < 0) {
-        dboard[m1.p2.i][m1.p2.j].owner = m1.id;
-        dboard[m1.p2.i][m1.p2.j].val = Math.abs(dboard[m1.p2.i][m1.p2.j].val);
+      let [i1, j1] = m1.p1;
+      let [i2, j2] = m1.p2;
+      this.board[i1][j1].val -= m1.dval;
+      dboard[i2][j2].val -= m1.dval;
+      if (dboard[i2][j2].val < 0) {
+        dboard[i2][j2].owner = m1.id;
+        dboard[i2][j2].val = Math.abs(dboard[i2][j2].val);
       }
     }
     let inherit_players = [];

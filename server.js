@@ -39,19 +39,24 @@ let io = require('socket.io')(server, {
 
 var M;
 var intervalId;
-
-let addMove = (move) => {
-  if (M == null) return;
-  M.G.players[move.player_id-1].addMove(move.p, move.d, move.is_half);
-}
+var realPlayerCount = 0;
 
 io.on('connection', socket => {
-  socket.on('addMove', move => {
-    addMove(move);
+  socket.on('newGame', () => {
+    socket.emit('playerId', 0);
   });
-  socket.on('ready', setting => {
+  socket.on('newPlayer', () => {
+    socket.emit('playerId', ++realPlayerCount);
+  });
+  socket.on('addMove', move => {
+    if (M == null) return;
+    M.G.players[move.player_id-1].addMove(move.p, move.d, move.is_half);
+  });
+  socket.on('createGame', setting => {
     M = new Meta(setting.row, setting.col, setting.real_player_cnt, setting.ai_player_cnt);
-    io.emit('gameStart');
+    socket.removeAllListeners('newGame');
+    socket.removeAllListeners('newPlayer');
+    io.emit('gameStart', M.G);
     clearInterval(intervalId);
     intervalId = setInterval(async () => {
       if (M == null) return;

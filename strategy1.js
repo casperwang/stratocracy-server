@@ -16,7 +16,6 @@ const shuffleArray = (array) => {
   }
   return array;
 }
-  
 
 const adj4 = ([i, j], row, col) => {
   const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -27,21 +26,21 @@ const adj4 = ([i, j], row, col) => {
   return res;
 }
 
-var hometowns = new Array(8).fill({i: -1, j: -1});
+var hometowns = new Array(8).fill([-1, -1]);
 
 const s1 = (player) => {
   for (let i = 0; i < player.row; i++) {
     for (let j = 0; j < player.col; j++) {
       if (player.board[i][j].type === BoardType.hometown) {
-        hometowns[player.board[i][j].owner] = {i: i, j: j};
+        hometowns[player.board[i][j].owner] = [i, j];
       }
     }
   }
-  for (let p of hometowns) {
-    if (p.i === -1) continue;
-    if (player.board[p.i][p.j].type === BoardType.invisible) continue;
-    if (player.board[p.i][p.j].type === BoardType.hometown) continue;
-    p = {i: -1, j: -1};
+  for (let [pi, pj] of hometowns) {
+    if (pi === -1) continue;
+    if (player.board[pi][pj].type === BoardType.invisible) continue;
+    if (player.board[pi][pj].type === BoardType.hometown) continue;
+    [pi, pj] = [-1, -1];
   }
 
   for (let i = 0; i < player.row; i++) {
@@ -52,7 +51,7 @@ const s1 = (player) => {
         if (player.board[ai][aj].owner === player.id) continue;
         if (player.board[ai][aj].val >= player.board[i][j]-1) continue;
         let is_half = (Math.floor((player.board[i][j].val-1)/2) > player.board[ai][aj].val);
-        player.addMove({i: i, j: j}, {i: ai-i, j: aj-j}, is_half);
+        player.addMove([i, j], [ai-i, aj-j], is_half);
         return;
       }
     }
@@ -68,7 +67,7 @@ const s1 = (player) => {
           if (player.board[ai][aj].owner === player.id) continue;
           if (player.board[ai][aj].val >= player.board[i][j].val-1) continue;
           let is_half = (Math.floor((player.board[i][j].val-1)/2) > player.board[ai][aj].val);
-          player.addMove({i: i, j: j}, {i: ai-i, j: aj-j}, is_half);
+          player.addMove([i, j], [ai-i, aj-j], is_half);
           return;
         }
       }
@@ -90,7 +89,7 @@ const s1 = (player) => {
     if (player.board[ai][aj].owner === player.id) continue;
     if (player.board[ai][aj].val >= player.board[mx.i][mx.j]-1) continue;
     let is_half = (Math.floor((player.board[mx.i][mx.j].val-1)/2) > player.board[ai][aj].val);
-    player.addMove({i: mx.i, j: mx.j}, {i: ai-mx.i, j: aj-mx.j}, is_half);
+    player.addMove([mx.i, mx.j], [ai-mx.i, aj-mx.j], is_half);
     return;
   }
   let mmx = {i: -1, j: -1, val: -1};
@@ -103,7 +102,7 @@ const s1 = (player) => {
     }
   }
   if (mmx.i !== -1) {
-    player.addMove({i: mx.i, j: mx.j}, {i: mmx.i-mx.i, j: mmx.j-mx.j}, false);
+    player.addMove([mx.i, mx.j], [mmx.i-mx.i, mmx.j-mx.j], false);
     return;
   }
 }
