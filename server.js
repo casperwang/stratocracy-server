@@ -38,6 +38,7 @@ let io = require('socket.io')(server, {
 });
 
 var M;
+var intervalId;
 
 let addMove = (move) => {
   if (M == null) return;
@@ -51,7 +52,8 @@ io.on('connection', socket => {
   socket.on('ready', setting => {
     M = new Meta(setting.row, setting.col, setting.real_player_cnt, setting.ai_player_cnt);
     io.emit('gameStart');
-    setInterval(async () => {
+    clearInterval(intervalId);
+    intervalId = setInterval(async () => {
       if (M == null) return;
       await M.G.board_next_step();
       for (let player_id = 1; player_id <= M.player_cnt; player_id++) {
