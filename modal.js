@@ -1,11 +1,4 @@
-const BoardType = {
-  obstacle: "obstacle",
-  hometown: "hometown",
-  land: "land",
-  castle: "castle",
-  invisible: "invisible",
-  invisible_obstacle: "invisible_obstacle"
-};
+const config = require('./config.js');
 
 const BoardElement = (type, owner) => {
   return {
@@ -48,32 +41,32 @@ class Game {
     this.board = new Array(this.row).fill().map(() => new Array(this.col));
     for (let i = 0; i < this.row; i++)
       for (let j = 0; j < this.col; j++)
-        this.board[i][j] = BoardElement(BoardType.land, 0);
+        this.board[i][j] = BoardElement(config.boardType.land, 0);
     this.players = [];
     this.time = 0;
 
     // obstacle initialization
     for (let _ = 0; _ < obstacle_rate * this.row * this.col; _++) {
       let [pi, pj] = this.pRandom();
-      while (this.board[pi][pj].type !== BoardType.land || this.check_board_cut([pi, pj]))
+      while (this.board[pi][pj].type !== config.boardType.land || this.check_board_cut([pi, pj]))
         [pi, pj] = this.pRandom();
-      this.board[pi][pj].type = BoardType.obstacle;
+      this.board[pi][pj].type = config.boardType.obstacle;
     }
     // castle initialization
     for (let _ = 0; _ < castle_rate * this.row * this.col; _++) {
       let [pi, pj] = this.pRandom();
-      while (this.board[pi][pj].type !== BoardType.land)
+      while (this.board[pi][pj].type !== config.boardType.land)
         [pi, pj] = this.pRandom();
-      this.board[pi][pj].type = BoardType.castle;
+      this.board[pi][pj].type = config.boardType.castle;
       this.board[pi][pj].val = 40 + Math.floor(Math.random() * 11);
     }
     // player initialization
     this.players = [];
     for (let player_id = 1; player_id <= player_cnt; player_id++) {
       let [pi, pj] = this.pRandom();
-      while (this.board[pi][pj].type !== BoardType.land)
+      while (this.board[pi][pj].type !== config.boardType.land)
         [pi, pj] = this.pRandom();
-      this.board[pi][pj].type = BoardType.hometown;
+      this.board[pi][pj].type = config.boardType.hometown;
       this.board[pi][pj].owner = player_id;
       this.players.push(new Player(this.row, this.col, this.board_mask(player_id), [pi, pj], player_id, player_id, this.time));
     }
@@ -102,18 +95,18 @@ class Game {
   }
 
   check_board_cut = ([pi, pj]) => {
-    this.board[pi][pj].type = BoardType.obstacle;
+    this.board[pi][pj].type = config.boardType.obstacle;
     let visited = new Array(this.row).fill().map(() => new Array(this.col));
     let cnt_land = 0;
     for (let i = 0; i < this.row; i++) {
       for (let j = 0; j < this.col; j++) {
         visited[i][j] = false;
-        cnt_land += (this.board[i][j].type === BoardType.land ? 1 : 0);
+        cnt_land += (this.board[i][j].type === config.boardType.land ? 1 : 0);
       }
     }
     let bfs_queue = [];
     for (const [ai, aj] of this.adj4([pi, pj])) {
-      if (this.board[ai][aj].type !== BoardType.obstacle) {
+      if (this.board[ai][aj].type !== config.boardType.obstacle) {
         bfs_queue.push([ai, aj]);
         visited[ai][aj] = true;
         break;
@@ -123,13 +116,13 @@ class Game {
       const [i, j] = bfs_queue.shift();
       cnt_land--;
       for (const [ai, aj] of this.adj4([i, j])) {
-        if (this.board[ai][aj].type === BoardType.land && !visited[ai][aj]) {
+        if (this.board[ai][aj].type === config.boardType.land && !visited[ai][aj]) {
           bfs_queue.push([ai, aj]);
           visited[ai][aj] = true;
         }
       }
     }
-    this.board[pi][pj].type = BoardType.land;
+    this.board[pi][pj].type = config.boardType.land;
     return cnt_land > 0;
   };
 
@@ -140,9 +133,9 @@ class Game {
           return this.board[ai][aj].owner === player_id;
         });
         if (visible) return cell;
-        let res = BoardElement(BoardType.invisible, 0);
-        if (cell.type === BoardType.obstacle || cell.type === BoardType.castle)
-          res.type = BoardType.invisible_obstacle;
+        let res = BoardElement(config.boardType.invisible, 0);
+        if (cell.type === config.boardType.obstacle || cell.type === config.boardType.castle)
+          res.type = config.boardType.invisible_obstacle;
         return res;
       })
     })
@@ -161,7 +154,7 @@ class Game {
       let [i1, j1] = move.p;
       let [i2, j2] = [i1 + di, j1 + dj];
       let flag = false;
-      while (i2 < 0 || i2 >= this.row || j2 < 0 || j2 >= this.col || this.board[i1][j1].owner !== player.id || this.board[i1][j1].val === 0 || this.board[i2][j2].type === BoardType.obstacle) {
+      while (i2 < 0 || i2 >= this.row || j2 < 0 || j2 >= this.col || this.board[i1][j1].owner !== player.id || this.board[i1][j1].val === 0 || this.board[i2][j2].type === config.boardType.obstacle) {
         if (player.moves.length === 0) {
           flag = true;
           break;
@@ -207,9 +200,9 @@ class Game {
         } else {
           this.board[i][j].val -= dboard[i][j].val;
           if (this.board[i][j].val < 0) {
-            if (this.board[i][j].type === BoardType.hometown) {
+            if (this.board[i][j].type === config.boardType.hometown) {
               this.players[this.board[i][j].owner-1].gameover(dboard[i][j].owner);
-              this.board[i][j].type = BoardType.castle;
+              this.board[i][j].type = config.boardType.castle;
               inherit_players.push({old: this.board[i][j].owner, new: dboard[i][j].owner});
             }
             this.board[i][j].owner = dboard[i][j].owner;
@@ -233,11 +226,11 @@ class Game {
     for (let i = 0; i < this.row; i++) {
       for (let j = 0; j < this.col; j++) {
         if (this.board[i][j].owner === 0) continue;
-        if (this.board[i][j].type === BoardType.land) {
+        if (this.board[i][j].type === config.boardType.land) {
           if (this.time % 50 === 0) {
             this.board[i][j].val++;
           }
-        } else if (this.board[i][j].type === BoardType.castle || this.board[i][j].type === BoardType.hometown) {
+        } else if (this.board[i][j].type === config.boardType.castle || this.board[i][j].type === config.boardType.hometown) {
           if (this.time % 2 === 0) {
             this.board[i][j].val++;
           }

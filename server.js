@@ -1,16 +1,19 @@
-var Game = require('./modal');
-var s1 = require('./strategy1');
+const Game = require('./modal'); // Game Modal
+const strategy1 = require('./strategy1'); // AI with greedy algorithm
+// TODO: AI with A* algorithm
 
 const express = require('express');
 const app = express();
 
-class Meta {
+const config = require('./config.js');
+
+class Meta { // control the whole game
   constructor(row, col, real_player_cnt, ai_player_cnt) {
     this.row = row;
     this.col = col;
     this.player_cnt = real_player_cnt + ai_player_cnt;
 
-    this.G = new Game(this.row, this.col, 0.2, 0.02, this.player_cnt);
+    this.G = new Game(this.row, this.col, config.OBSTACLE_RATE, config.CASTLE_RATE, this.player_cnt);
 
     this.players = new Array(this.player_cnt+1);
     const get_player_type = (player_id) => {
@@ -37,9 +40,15 @@ let io = require('socket.io')(server, {
   }
 });
 
-var M;
-var intervalId;
-var realPlayerCount = 0;
+let meta;
+let intervalId;
+let current_players = new Set()
+let realPlayerCount = 0;
+
+const new_random_id = () => {
+  random_id = Math.floor(Math.random() * 10000);
+  while (current_players.has(random_id))
+}
 
 io.on('connection', socket => {
   socket.on('newGame', () => {
@@ -49,24 +58,24 @@ io.on('connection', socket => {
     socket.emit('playerId', ++realPlayerCount);
   });
   socket.on('addMove', move => {
-    if (M == null) return;
-    M.G.players[move.player_id-1].addMove(move.p, move.d, move.is_half);
+    if (meta == null) return;
+    meta.G.players[move.player_id-1].addMove(move.p, move.d, move.is_half);
   });
   socket.on('createGame', setting => {
-    M = new Meta(setting.row, setting.col, setting.real_player_cnt, setting.ai_player_cnt);
+    meta = new Meta(setting.row, setting.col, setting.real_player_cnt, setting.ai_player_cnt);
     socket.removeAllListeners('newGame');
     socket.removeAllListeners('newPlayer');
-    io.emit('gameStart', M.G);
+    io.emit('gameStart', meta.G);
     clearInterval(intervalId);
     intervalId = setInterval(async () => {
-      if (M == null) return;
-      await M.G.board_next_step();
-      for (let player_id = 1; player_id <= M.player_cnt; player_id++) {
-        if (M.players[player_id].flag === false) continue;
-        if (M.players[player_id].type === 'ai')
-          s1(M.G.players[player_id-1]);
+      if (meta == null) return;
+      await meta.G.board_next_step();
+      for (let player_id = 1; player_id <= meta.player_cnt; player_id++) {
+        if (meta.players[player_id].flag === false) continue;
+        if (meta.players[player_id].type === 'ai')
+          strategy1(meta.G.players[player_id-1]);
       }
-      io.emit('gameState', M.G);
-    }, 100);
+      io.emit('gameState', meta.G);
+    }, 300);
   });
 });
